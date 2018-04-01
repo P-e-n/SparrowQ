@@ -43,3 +43,8 @@ LIBS += -L$$PWD/../libs/DTCCM2_SDK/X64_Lib/ -ldtccm2
 
 INCLUDEPATH += $$PWD/../libs/DTCCM2_SDK
 DEPENDPATH += $$PWD/../libs/DTCCM2_SDK
+
+RESOURCES += \
+        assets.qrc
+
+win32: RC_ICONS = sparrow.ico

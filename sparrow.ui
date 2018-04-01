@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Sparrow</string>
+   <string/>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QWidget" name="layoutWidget">
@@ -96,6 +96,12 @@
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuSparrowQ">
+    <property name="title">
+     <string>About</string>
+    </property>
+   </widget>
+   <addaction name="menuSparrowQ"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -106,6 +112,16 @@
    </attribute>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionAbout_us">
+   <property name="text">
+    <string>About us</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>

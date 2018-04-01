@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>sparrow.png</file>
+        <file>sparrow.ico</file>
+    </qresource>
+</RCC>

@@ -5,8 +5,8 @@ Sparrow::Sparrow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Sparrow)
 {
+    setWindowIcon(QIcon(":/images/sparrow.png"));
     ui->setupUi(this);
-
     QString fileName = "logger.txt";
     logger = new Logger(this, fileName, ui->loggerPlainTextEdit);
     logger->write("SparrowQ Started!");
