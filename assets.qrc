@@ -2,5 +2,6 @@
     <qresource prefix="/images">
         <file>sparrow.png</file>
         <file>sparrow.ico</file>
+        <file>Flamingo.bmp</file>
     </qresource>
 </RCC>

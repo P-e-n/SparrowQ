@@ -1,5 +1,8 @@
 #include "sparrow.h"
 #include "ui_sparrow.h"
+#include <QPixmap>
+#include <QGraphicsScene>
+#include <QGraphicsPixmapItem>
 
 Sparrow::Sparrow(QWidget *parent) :
     QMainWindow(parent),
@@ -25,4 +28,19 @@ void Sparrow::on_enumerateDeviceButton_clicked()
     imageGrabber->DothinkeyOpen();
     imageGrabber->DothinkeyLoadIniFile(channel);
     imageGrabber->DothinkeyStartCamera(channel);
+}
+
+void Sparrow::on_testOpenBMP_clicked()
+{
+    QPixmap qp = QPixmap(":/images/Flamingo.bmp");
+    if (qp.isNull()) {
+        logger->write("Cannot open bmp file!");
+    } else {
+        //logger->write("Here!");
+        QGraphicsScene * scene = new QGraphicsScene();
+        QGraphicsPixmapItem *item = new QGraphicsPixmapItem(QPixmap(":/images/Flamingo.bmp"));
+        scene->addItem(item);
+        ui->testBmpView->setScene(scene);
+        ui->testBmpView->show();
+    }
 }

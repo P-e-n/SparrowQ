@@ -86,6 +86,29 @@
      <bool>true</bool>
     </property>
    </widget>
+   <widget class="QPushButton" name="testOpenBMP">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>130</y>
+      <width>151</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Open BMP</string>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="testBmpView">
+    <property name="geometry">
+     <rect>
+      <x>300</x>
+      <y>140</y>
+      <width>256</width>
+      <height>192</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
