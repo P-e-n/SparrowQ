@@ -2,6 +2,8 @@
 #define SPARROW_H
 
 #include <QMainWindow>
+#include "dothinkey.h"
+#include "logger.h"
 
 namespace Ui {
 class Sparrow;
@@ -20,6 +22,8 @@ private slots:
 
 private:
     Ui::Sparrow *ui;
+    Dothinkey *imageGrabber;
+    Logger* logger;
 };
 
 #endif // SPARROW_H

@@ -1,15 +1,16 @@
 #include "sparrow.h"
 #include "ui_sparrow.h"
 
-#include <Windows.h>
-#include <dtccm2.h>
-#include <imagekit.h>
-
 Sparrow::Sparrow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Sparrow)
 {
     ui->setupUi(this);
+
+    QString fileName = "logger.txt";
+    logger = new Logger(this, fileName, ui->loggerPlainTextEdit);
+    logger->write("Hello Qt");
+    imageGrabber = new Dothinkey(logger);
 }
 
 Sparrow::~Sparrow()
@@ -19,8 +20,6 @@ Sparrow::~Sparrow()
 
 void Sparrow::on_enumerateDeviceButton_clicked()
 {
-    char * DeviceName[4] = {0 };
-    int device_num;
-    EnumerateDevice(DeviceName, 4, &device_num);
-    ui->enumerateDeviceEdit->setText(QString::number(device_num));
+    imageGrabber->DothinkeyEnum();
+    imageGrabber->DothinkeyOpen();
 }

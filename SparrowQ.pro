@@ -25,10 +25,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        sparrow.cpp
+        sparrow.cpp \
+        dothinkey.cpp \
+        iniparser.cpp \
+        logger.cpp
 
 HEADERS += \
-        sparrow.h
+        sparrow.h \
+        dothinkey.h \
+        iniparser.h \
+        logger.h
 
 FORMS += \
         sparrow.ui
