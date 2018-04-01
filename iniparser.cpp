@@ -14,11 +14,9 @@ std::wstring s2ws(const std::string& s)
     return r;
 }
 
-iniParser::iniParser()
-{
+iniParser::iniParser(){}
 
-}
-
+iniParser::~iniParser(){}
 
 void iniParser::SetIniFilename(std::string sFilename)
 {
@@ -147,7 +145,6 @@ BOOL iniParser::GetI2CData(pSensorTab pSensor)
             if (state == 0)
             {
                 int tmp_1 = (int)line.find(",", 0);
-                int tmp_2 = (int)line.find(",", tmp_1);
                 sReg = line.substr(0, tmp_1);
                 sVal = line.substr(tmp_1 + 1, 4);
                 if (!sscanf_s(sReg.c_str(), "0x%x", &reg))

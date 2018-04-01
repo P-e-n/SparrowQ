@@ -21,7 +21,7 @@ Dothinkey::Dothinkey(Logger* logger)
     this->logger = logger;
 }
 
-void Dothinkey::DothinkeyEnum()
+BOOL Dothinkey::DothinkeyEnum()
 {
     logger->write("[DothinkeyEnum] is called");
     DeviceName[4] = { 0 };
@@ -31,7 +31,7 @@ void Dothinkey::DothinkeyEnum()
     {
         //Log::GetInstance()->Write("[DothinkeyEnum] Cannot find any device!");
         logger->write("[DothinkeyEnum] Cannot find any device!");
-        return;
+        return DT_ERROR_FAILED;
     }
     for (int i = 0; i < DeviceNum; i++)
     {
@@ -42,17 +42,23 @@ void Dothinkey::DothinkeyEnum()
             logger->write(str);
         }
     }
+    return DT_ERROR_OK;
 }
 
 //Only one channel of dothinkey
-void Dothinkey::DothinkeyOpen()
+BOOL Dothinkey::DothinkeyOpen()
 {
     if (m_iDevIDA >= 0) CloseDevice(m_iDevIDA);
     int iDevIDA = -1;
-    if (strlen(this->DeviceName[0]) && OpenDevice(this->DeviceName[0], &iDevIDA, 0) != DT_ERROR_OK)
+    if (DeviceName[0] != nullptr)
+    {
+        logger->write("[DothinkeyOpen] Cannot find any dothinkey device!");
+        return DT_ERROR_FAILED;
+    }
+    if (OpenDevice(this->DeviceName[0], &iDevIDA, 0) != DT_ERROR_OK)
     {
         logger->write("[DothinkeyOpen] Open device fail!");
-        return;
+        return DT_ERROR_FAILED;
     }
     else
     {
@@ -68,4 +74,335 @@ void Dothinkey::DothinkeyOpen()
             }
         }
     }
+    return DT_ERROR_OK;
+}
+
+BOOL Dothinkey::DothinkeyLoadIniFile(int channel) {
+    SensorTab *pCurrentSensor;
+    channel == 0 ? (pCurrentSensor = &this->current_sensor_a) : (pCurrentSensor = &this->current_sensor_b);
+    iniParser *iniParser_ = new iniParser();
+    std::string str_filename = "C:\\Sparrow\\IMX362_4L_3024_063_34.ini";
+    iniParser_->SetIniFilename(str_filename);
+
+    if (channel == 0)
+    {
+        m_fMclkA = (float)iniParser_->ReadIniData("Sensor", "mclk", 0x01) / 1000;
+        m_fAvddA = (float)iniParser_->ReadIniData("Sensor", "avdd", 0x00) / 1000;
+        m_fDovddA = (float)iniParser_->ReadIniData("Sensor", "dovdd", 0x00) / 1000;
+        m_fDvddA = (float)iniParser_->ReadIniData("Sensor", "dvdd", 0x00) / 1000;
+    }
+    else if (channel == 1)
+    {
+        m_fMclkB = (float)iniParser_->ReadIniData("Sensor", "mclk", 0x01) / 1000;
+        m_fAvddB = (float)iniParser_->ReadIniData("Sensor", "avdd", 0x00) / 1000;
+        m_fDovddB = (float)iniParser_->ReadIniData("Sensor", "dovdd", 0x00) / 1000;
+        m_fDvddB = (float)iniParser_->ReadIniData("Sensor", "dvdd", 0x00) / 1000;
+    }
+    pCurrentSensor->width = iniParser_->ReadIniData("Sensor", "width", 0);
+    pCurrentSensor->height = iniParser_->ReadIniData("Sensor", "height", 0);
+    pCurrentSensor->type = iniParser_->ReadIniData("Sensor", "type", 2);
+    pCurrentSensor->port = iniParser_->ReadIniData("Sensor", "port", 0);
+    pCurrentSensor->pin = iniParser_->ReadIniData("Sensor", "pin", 0);
+    pCurrentSensor->SlaveID = iniParser_->ReadIniData("Sensor", "SlaveID", 0);
+    pCurrentSensor->mode = iniParser_->ReadIniData("Sensor", "mode", 0);
+    pCurrentSensor->FlagReg = iniParser_->ReadIniData("Sensor", "FlagReg", 0);
+    pCurrentSensor->FlagMask = iniParser_->ReadIniData("Sensor", "FlagMask", 0xff);
+    pCurrentSensor->FlagData = iniParser_->ReadIniData("Sensor", "FlagData", 0);
+    pCurrentSensor->FlagReg1 = iniParser_->ReadIniData("Sensor", "FlagReg1", 0);
+    pCurrentSensor->FlagMask1 = iniParser_->ReadIniData("Sensor", "FlagMask1", 0x0);
+    pCurrentSensor->FlagData1 = iniParser_->ReadIniData("Sensor", "FlagData1", 0);
+    pCurrentSensor->outformat = iniParser_->ReadIniData("Sensor", "outformat", 0x00);
+    pCurrentSensor->mclk = iniParser_->ReadIniData("Sensor", "mclk", 0x01);
+    pCurrentSensor->avdd = iniParser_->ReadIniData("Sensor", "avdd", 0x00);
+    pCurrentSensor->dovdd = iniParser_->ReadIniData("Sensor", "dovdd", 0x00);
+    pCurrentSensor->dvdd = iniParser_->ReadIniData("Sensor", "dvdd", 0x00);
+    pCurrentSensor->ParaList = new USHORT[8192 * 4];
+    pCurrentSensor->ParaListSize = 0;
+    pCurrentSensor->SleepParaList = NULL;
+    pCurrentSensor->SleepParaListSize = NULL;
+
+    iniParser_->GetI2CData(pCurrentSensor);
+
+    delete iniParser_;
+    return DT_ERROR_OK;
+}
+
+BOOL Dothinkey::DothinkeyStartCamera(int channel)
+{
+    SensorTab *pSensor = nullptr;
+    ULONG *grabSize = nullptr;
+    int iDevID = -1;
+    if (channel == 0)
+    {
+        pSensor = &current_sensor_a;
+        iDevID = m_iDevIDA;
+        grabSize = &m_GrabSizeA;
+    }
+    else if (channel == 1)
+    {
+        pSensor = &current_sensor_b;
+        iDevID = m_iDevIDB;
+        grabSize = &m_GrabSizeB;
+    }
+    channel == 0 ? pSensor = &current_sensor_a : &current_sensor_b;
+    channel == 0 ? iDevID = m_iDevIDA : m_iDevIDB;
+    //ToDo: KillDataBuffer
+    SetSoftPinPullUp(IO_NOPULL, 0);
+    if (SetSensorClock(false, (USHORT)(0 * 10), iDevID) != DT_ERROR_OK)
+    {
+        CloseDevice(iDevID);
+        logger->write("[DothinkeyStartCamera] Set Clock Fail!");
+        return false;
+    }
+    Sleep(1);
+
+    if (SetVoltageMclk(*pSensor, iDevID, m_fMclkA, m_fAvddA, m_fDvddA, m_fDovddA, m_fAfvccA, m_vppA) != DT_ERROR_OK)
+    {
+        CloseDevice(iDevID);
+        logger->write("[DothinkeyStartCamera] Set Voltage and Mclk Failed!");
+        return false;
+    }
+    logger->write("[DothinkeyStartCamera] Start Camera Success!");
+
+    //I2C init
+    SetSensorI2cRate(I2C_400K, iDevID);
+    SetSensorI2cRapid(TRUE, iDevID);
+
+    //check sensor is on line or not ,if on line,init sensor to work....
+    SensorEnable(pSensor->pin ^ 0x02, 1, iDevID); //reset
+    Sleep(20);
+    SensorEnable(pSensor->pin, 1, iDevID);
+    Sleep(50);
+
+    //check sensoris on line...
+    if (SensorIsMe(pSensor, CHANNEL_A, 0, iDevID) != DT_ERROR_OK)
+    {
+        logger->write("[DothinkeyStartCamera] Sensor is not ok!");
+        return DT_ERROR_FAILED;
+    }
+    //init sensor....
+    if (InitSensor(pSensor->SlaveID,
+        pSensor->ParaList,
+        pSensor->ParaListSize,
+        pSensor->mode, iDevID) != DT_ERROR_OK)
+    {
+        logger->write("[DothinkeyStartCamera] Init Sensor Failed! \r\n");
+        return DT_ERROR_FAILED;
+    }
+
+    if (pSensor->type == D_YUV || pSensor->type == D_YUV_SPI || pSensor->type == D_YUV_MTK_S)
+        SetYUV422Format(pSensor->outformat, iDevID);
+    else
+        SetRawFormat(pSensor->outformat, iDevID);
+    InitRoi(0, 0, pSensor->width, pSensor->height, 0, 0, 1, 1, pSensor->type, TRUE, iDevID);
+    SetSensorPort(pSensor->port, pSensor->width, pSensor->height, iDevID);
+    CalculateGrabSize(grabSize, iDevID);
+    //open video....
+    OpenVideo(*grabSize, iDevID);
+    SetMonoMode(true, iDevID);
+    //InitDisplay(wnd->GetSafeHwnd(), pSensor->width, pSensor->height, pSensor->type, CHANNEL_A, NULL, iDevID);
+    //InitIsp(pSensor->width, pSensor->height, pSensor->type, CHANNEL_A, iDevID);
+    return DT_ERROR_OK;
+}
+
+BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, float Avdd, float Dvdd, float Dovdd, float Afvcc, float vpp)
+{
+    SENSOR_POWER Power[10] = { POWER_AVDD, POWER_DOVDD, POWER_DVDD, POWER_AFVCC, POWER_VPP };
+    int Volt[10] = { 0 };
+    int Current[10] = { 300, 300, 300, 300, 100 };//300mA
+    BOOL OnOff[10] = { TRUE,TRUE,TRUE,TRUE,TRUE };
+    CURRENT_RANGE range[5] = { CURRENT_RANGE_MA, CURRENT_RANGE_MA, CURRENT_RANGE_MA, CURRENT_RANGE_MA, CURRENT_RANGE_MA };
+    //set power to 0V
+    if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
+    {
+        CloseDevice(iDevID);
+        logger->write("[SetVoltageMclk] Set Voltage Failed! \r\n");
+        return DT_ERROR_FAILED;
+    }
+    //wait for the power is all to zero....
+    Sleep(50);
+    if (PmuSetOnOff(Power, OnOff, 5, iDevID) != DT_ERROR_OK)
+    {
+        CloseDevice(iDevID);
+        logger->write("[SetVoltageMclk] Open PowerOnOff Failed! \r\n");
+        return DT_ERROR_FAILED;
+    }
+    Sleep(50);
+    // 1. set power the avdd
+    Volt[POWER_DOVDD] = (int)(Dovdd * 1000); // 2.8V
+    if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
+    {
+        logger->write("[SetVoltageMclk] Open PowerOn Failed!");
+        return DT_ERROR_FAILED;
+    }
+    Sleep(2);
+
+    // 2, set power the dvdd
+    Volt[POWER_DVDD] = (int)(Dvdd * 1000); // 2.8V
+    if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
+    {
+        logger->write("[SetVoltageMclk] Open PowerOn Failed!");
+        return DT_ERROR_FAILED;
+    }
+    Sleep(2);
+
+    // 3, set power the dovdd
+    Volt[POWER_AVDD] = (int)(Avdd * 1000); // 2.8V
+    if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
+    {
+        logger->write("[SetVoltageMclk] Open PowerOn Failed!");
+        return DT_ERROR_FAILED;
+    }
+    Sleep(2);
+    //4. set power the afvcc and vpp
+    Volt[POWER_AFVCC] = (int)(Afvcc * 1000); // 2.8V
+    Volt[POWER_VPP] = (int)(vpp * 1000); // 2.8V
+    if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
+    {
+        logger->write("[SetVoltageMclk] Open PowerOn Failed!");
+        return DT_ERROR_FAILED;
+    }
+    //should wait for 50ms to be ready...
+    Sleep(50);
+    //first set pin definition...
+    {
+        BYTE  pinDef[40] = { 0 };
+        if (CurrentSensor.port == PORT_MIPI || CurrentSensor.port == PORT_HISPI)
+        {
+            pinDef[0] = 20;
+            pinDef[1] = 0;
+            pinDef[2] = 2;
+            pinDef[3] = 1;
+            pinDef[4] = 3;
+            pinDef[5] = 4;
+            pinDef[6] = 5;
+            pinDef[7] = 6;
+            pinDef[8] = 7;
+            pinDef[9] = 8;
+            pinDef[10] = 9;
+            pinDef[11] = 20;
+            pinDef[12] = 10;
+            pinDef[13] = 11;
+            pinDef[14] = 12;
+            pinDef[15] = 20;
+            pinDef[16] = 20;
+            pinDef[17] = 13;
+            pinDef[18] = 15;
+            pinDef[19] = 14;
+            pinDef[20] = 19;
+            pinDef[21] = 18;
+            pinDef[22] = 20;
+            pinDef[23] = 16;
+            pinDef[24] = 20;
+            pinDef[25] = 20;
+        }
+        else  //standard parallel..
+        {
+
+            pinDef[0] = 16;
+            pinDef[1] = 0;
+            pinDef[2] = 2;
+            pinDef[3] = 1;
+            pinDef[4] = 3;
+            pinDef[5] = 4;
+            pinDef[6] = 5;
+            pinDef[7] = 6;
+            pinDef[8] = 7;
+            pinDef[9] = 8;
+            pinDef[10] = 9;
+            pinDef[11] = 20;
+            pinDef[12] = 10;
+            pinDef[13] = 11;
+            pinDef[14] = 12;
+            pinDef[15] = 20;
+            pinDef[16] = 20;
+            pinDef[17] = 20;
+            pinDef[18] = 20;
+            pinDef[19] = 20;
+            pinDef[20] = 13;
+            pinDef[21] = 20;
+            pinDef[22] = 14;
+            pinDef[23] = 15;
+            pinDef[24] = 18;
+            pinDef[25] = 19;
+        }
+        SetSoftPin(pinDef, iDevID);
+    }
+    EnableSoftPin(TRUE, iDevID);
+    EnableGpio(TRUE, iDevID);
+
+    int SampleSpeed[5] = { 100,100,100,100,100 };
+    PmuSetSampleSpeed(Power, SampleSpeed, 5, iDevID);
+    Sleep(10);
+    {
+        PmuSetCurrentRange(Power, range, 5, iDevID);
+        PmuSetOcpCurrentLimit(Power, Current, 5, iDevID);
+    }
+    if (SetSensorClock(TRUE, (USHORT)(Mclk * 10), iDevID) != DT_ERROR_OK)
+    {
+        logger->write("[SetVoltageMclk] Set Mclk Failed!");
+        return DT_ERROR_FAILED;
+    }
+    SetSoftPinPullUp(IO_PULLUP, iDevID);
+    return TRUE;
+}
+
+BOOL Dothinkey::DothinkeyGrabImage(int channel)
+{
+    LPBYTE bmpBuffer = NULL;
+    SensorTab *pSensor = nullptr;
+    ULONG retSize = 0;
+    int iDevID = -1;
+    UINT crcCount = 0;
+    int grabSize;
+    if (channel == 0)
+    {
+        pSensor = &current_sensor_a;
+        iDevID = this->m_iDevIDA;
+        grabSize = this->m_GrabSizeA;
+    }
+    else if (channel == 1)
+    {
+        pSensor = &current_sensor_b;
+        iDevID = this->m_iDevIDB;
+        grabSize = this->m_GrabSizeB;
+    }
+
+    USHORT width = pSensor->width;
+    USHORT height = pSensor->height;
+    //BYTE type = pSensor->type;
+    FrameInfo frameInfo;
+    bmpBuffer = (LPBYTE)malloc(width * height * 4);
+    if (bmpBuffer == NULL)
+    {
+        logger->write("[DothinkeyGrabImage] Malloc BMP buffer fail.");
+    }
+    //allocate the bmp buffer.
+    UINT nSize = width * height * 3 + 1024 * 1024;
+    LPBYTE CameraBuffer = NULL;
+    CameraBuffer = (LPBYTE)malloc(nSize);
+    if ((CameraBuffer == NULL))
+    {
+        return DT_ERROR_FAILED;
+    }
+    memset(CameraBuffer, 0, nSize);
+    for (int i = 0; i < 10; i++)
+    {
+        logger->write("[DothinkeyGrabImage] Grabbing image...");
+        int ret = GrabFrame(CameraBuffer, grabSize, &retSize, &frameInfo, iDevID);
+        if (ret == DT_ERROR_OK)
+        {
+            GetMipiCrcErrorCount(&crcCount, CHANNEL_A, iDevID);
+        }
+        //BOOL bRaw10 = FALSE;
+        ImageProcess(CameraBuffer, bmpBuffer, width, height, &frameInfo, iDevID);
+        DisplayRGB24(bmpBuffer, &frameInfo, iDevID);
+        //SaveBmpFile(std::to_string(iDevID) + "_" + std::to_string(i) + ".bmp", bmpBuffer, width, height);
+        //Sleep(1000);
+    }
+    delete(bmpBuffer);
+    delete(CameraBuffer);
+    bmpBuffer = NULL;
+    CameraBuffer = NULL;
+    return DT_ERROR_OK;
 }

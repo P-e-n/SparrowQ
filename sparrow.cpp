@@ -9,7 +9,7 @@ Sparrow::Sparrow(QWidget *parent) :
 
     QString fileName = "logger.txt";
     logger = new Logger(this, fileName, ui->loggerPlainTextEdit);
-    logger->write("Hello Qt");
+    logger->write("SparrowQ Started!");
     imageGrabber = new Dothinkey(logger);
 }
 
@@ -20,6 +20,9 @@ Sparrow::~Sparrow()
 
 void Sparrow::on_enumerateDeviceButton_clicked()
 {
+    const int channel = 0;
     imageGrabber->DothinkeyEnum();
     imageGrabber->DothinkeyOpen();
+    imageGrabber->DothinkeyLoadIniFile(channel);
+    imageGrabber->DothinkeyStartCamera(channel);
 }
