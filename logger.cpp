@@ -18,7 +18,10 @@ Logger::~Logger() {
 void Logger::write(const QString &value) {
    QString text = value;// + "";
    if (m_showDate)
-      text = QTime::currentTime().toString("dd.MM.yyyy hh:mm:ss.zzz ") + text;
+   {
+      text = QDateTime::currentDateTime().toString("dd.MM.yyyy ") +
+             QTime::currentTime().toString("hh:mm:ss.zzz ") + text;
+   }
    QTextStream out(file);
    out.setCodec("UTF-8");
    if (file != 0) {

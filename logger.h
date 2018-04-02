@@ -5,6 +5,7 @@
 #include <QPlainTextEdit>
 #include <QFile>
 #include <QTextStream>
+#include <QDateTime>
 #include <QTime>
 
 class Logger : public QObject

@@ -102,10 +102,10 @@
    <widget class="QGraphicsView" name="testBmpView">
     <property name="geometry">
      <rect>
-      <x>300</x>
-      <y>140</y>
-      <width>256</width>
-      <height>192</height>
+      <x>330</x>
+      <y>10</y>
+      <width>621</width>
+      <height>441</height>
      </rect>
     </property>
    </widget>

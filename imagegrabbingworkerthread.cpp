@@ -1,20 +1,28 @@
 #include "imagegrabbingworkerthread.h"
 
-imageGrabbingWorkerThread::imageGrabbingWorkerThread(QObject *parent)
+ImageGrabbingWorkerThread::ImageGrabbingWorkerThread(Dothinkey* dk, QObject *parent)
     :forceStop(false)
 {
-
+    this->dk = dk;
 }
 
-void imageGrabbingWorkerThread::run()
+void ImageGrabbingWorkerThread::run()
 {
-    for (int i = 0; i < 10; i++) {
-        if (forceStop) return;
-        emit done();
+    while(true) {
+        //QMutex mutex;
+        // prevent other threads from changing the "Stop" value
+        //mutex.lock();
+        if(this->forceStop) break;
+        //mutex.unlock();
+        QImage* image = new QImage();
+        dk->DothinkeyGrabImage(0, *image);
+        emit imageChanged(*image);
+        QThread::msleep(500); //Slow down the cpu cooldown
     }
 }
 
-void imageGrabbingWorkerThread::stop()
+void ImageGrabbingWorkerThread::stop()
 {
     forceStop = true;
 }
+

@@ -1,6 +1,6 @@
 #include "dothinkey.h"
 
-Dothinkey::Dothinkey(Logger* logger, QGraphicsView* view, QWidget *parent)
+Dothinkey::Dothinkey(Logger* logger, QWidget *parent)
     : m_iDevIDA(-1)
     , m_iDevIDB(-1)
     , m_fMclkA(12.0f)
@@ -19,22 +19,15 @@ Dothinkey::Dothinkey(Logger* logger, QGraphicsView* view, QWidget *parent)
     , m_vppB(0.0f)
 {
     this->logger = logger;
-    this->view = view;
-    imageGrabbingThread = new imageGrabbingWorkerThread();
-    connect(imageGrabbingThread,  SIGNAL(done()), this, SLOT(finishGrabbing()));
 }
 
 Dothinkey::~Dothinkey()
 {
     //Clear things here
-    if (imageGrabbingThread != nullptr) {
-        imageGrabbingThread->quit();
-    }
 }
 
 BOOL Dothinkey::DothinkeyEnum()
 {
-    imageGrabbingThread->start();
     logger->write("[DothinkeyEnum] is called");
     DeviceName[4] = { 0 };
     int DeviceNum;
@@ -361,9 +354,9 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     return TRUE;
 }
 
-BOOL Dothinkey::DothinkeyGrabImage(int channel)
+BOOL Dothinkey::DothinkeyGrabImage(int channel, QImage& output)
 {
-    logger->write("[DothinkeyGrabImage] Start");
+    //logger->write("[DothinkeyGrabImage] Start");
     LPBYTE bmpBuffer = NULL;
     SensorTab *pSensor = nullptr;
     ULONG retSize = 0;
@@ -382,7 +375,6 @@ BOOL Dothinkey::DothinkeyGrabImage(int channel)
         iDevID = this->m_iDevIDB;
         grabSize = this->m_GrabSizeB;
     }
-
     USHORT width = pSensor->width;
     USHORT height = pSensor->height;
     //BYTE type = pSensor->type;
@@ -390,7 +382,7 @@ BOOL Dothinkey::DothinkeyGrabImage(int channel)
     bmpBuffer = (LPBYTE)malloc(width * height * 4);
     if (bmpBuffer == NULL)
     {
-        logger->write("[DothinkeyGrabImage] Malloc BMP buffer fail.");
+      //  logger->write("[DothinkeyGrabImage] Malloc BMP buffer fail.");
     }
     //allocate the bmp buffer.
     UINT nSize = width * height * 3 + 1024 * 1024;
@@ -398,41 +390,43 @@ BOOL Dothinkey::DothinkeyGrabImage(int channel)
     CameraBuffer = (LPBYTE)malloc(nSize);
     if ((CameraBuffer == NULL))
     {
-        return DT_ERROR_FAILED;
+        return false;
     }
     memset(CameraBuffer, 0, nSize);
-    logger->write("[DothinkeyGrabImage] Grabbing image...");
+  //  logger->write("[DothinkeyGrabImage] Grabbing image...");
     int ret = GrabFrame(CameraBuffer, grabSize, &retSize, &frameInfo, iDevID);
     if (ret == DT_ERROR_OK)
     {
         GetMipiCrcErrorCount(&crcCount, CHANNEL_A, iDevID);
     }
-    logger->write("[DothinkeyGrabImage] Grabbing image finished");
+  //  logger->write("[DothinkeyGrabImage] Grabbing image finished");
     //BOOL bRaw10 = FALSE;
     ImageProcess(CameraBuffer, bmpBuffer, width, height, &frameInfo, iDevID);
-    logger->write("[DothinkeyGrabImage] Display 1");
+  //  logger->write("[DothinkeyGrabImage] Display 1");
     //DisplayRGB24(bmpBuffer, &frameInfo, iDevID);
     //logger->write("[DothinkeyGrabImage] Display 2");
     QImage * image = new QImage((const uchar*) bmpBuffer, width, height, QImage::Format_RGB888);
-    QPixmap pixmap = QPixmap::fromImage(*image);
-    QGraphicsScene * scene = new QGraphicsScene();
+   /* QPixmap pixmap = QPixmap::fromImage(*image);
+    if (scene == nullptr)
+    {
+        scene = new QGraphicsScene();
+    }
     logger->write("[DothinkeyGrabImage] Display");
+    scene->clear();
     scene->addPixmap(pixmap);
     view->setScene(scene);
-    view->show();
+    view->fitInView(scene->sceneRect(), Qt::KeepAspectRatio);
+    //view->show();
+    */
     delete(bmpBuffer);
     delete(CameraBuffer);
     bmpBuffer = NULL;
     CameraBuffer = NULL;
-    logger->write("[DothinkeyGrabImage] Finish");
-    return DT_ERROR_OK;
-}
-
-BOOL Dothinkey::DothinkeyGrabbingThread(bool on)
-{
-    logger->write("Force stop is clicked");
-    imageGrabbingThread->stop();
-    return DT_ERROR_OK;
+    //delete image;
+    //delete scene;
+  //  logger->write("[DothinkeyGrabImage] Finish");
+    output = *image;
+    return true;
 }
 
 BOOL Dothinkey::SaveBmpFile(std::string sfilename, BYTE *pBuffer, UINT width, UINT height)
@@ -477,9 +471,4 @@ BOOL Dothinkey::SaveBmpFile(std::string sfilename, BYTE *pBuffer, UINT width, UI
     _lclose(bmpFile);
 
     return TRUE;
-}
-
-void Dothinkey::finishGrabbing()
-{
-    DothinkeyGrabImage(0);
 }
