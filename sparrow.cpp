@@ -13,7 +13,7 @@ Sparrow::Sparrow(QWidget *parent) :
     QString fileName = "logger.txt";
     logger = new Logger(this, fileName, ui->loggerPlainTextEdit);
     logger->write("SparrowQ Started!");
-    imageGrabber = new Dothinkey(logger);
+    imageGrabber = new Dothinkey(logger, ui->testBmpView, nullptr);
 }
 
 Sparrow::~Sparrow()
@@ -30,6 +30,12 @@ void Sparrow::on_enumerateDeviceButton_clicked()
     imageGrabber->DothinkeyStartCamera(channel);
 }
 
+void Sparrow::on_openCameraButton_clicked()
+{
+    logger->write("OpenDevice clicked");
+    imageGrabber->DothinkeyGrabbingThread(true);
+}
+
 void Sparrow::on_testOpenBMP_clicked()
 {
     QPixmap qp = QPixmap(":/images/Flamingo.bmp");
@@ -38,7 +44,7 @@ void Sparrow::on_testOpenBMP_clicked()
     } else {
         //logger->write("Here!");
         QGraphicsScene * scene = new QGraphicsScene();
-        QGraphicsPixmapItem *item = new QGraphicsPixmapItem(QPixmap(":/images/Flamingo.bmp"));
+        QGraphicsPixmapItem *item = new QGraphicsPixmapItem(qp);
         scene->addItem(item);
         ui->testBmpView->setScene(scene);
         ui->testBmpView->show();

@@ -7,28 +7,41 @@
 #include "dtccm2.h"
 #include "iniparser.h"
 #include "logger.h"
+#include "imagegrabbingworkerthread.h"
+#include <QObject>
+#include <QPixmap>
+#include <QGraphicsScene>
+#include <QGraphicsPixmapItem>
+#include <QGraphicsView>
 
 #define CAMERA_START 1
 #define CAMERA_STOP 2
 #define GRAB_START 1
 #define GRAB_STOP 2
 
-class Dothinkey
+class Dothinkey : public QObject
 {
+    Q_OBJECT
 public:
-    explicit Dothinkey(Logger* logger);
+    explicit Dothinkey(Logger* logger, QGraphicsView* view, QWidget *parent = 0);
     ~Dothinkey();
     BOOL DothinkeyEnum();   //Enumerate the dothinkey devices
     BOOL DothinkeyOpen();   //Open Camera Devices
     BOOL DothinkeyLoadIniFile(int channel);   // 0 is camera channel 0, 1 is camera channel 1
     BOOL DothinkeyStartCamera(int channel);
     BOOL DothinkeyGrabImage(int channel);
+    BOOL DothinkeyGrabbingThread(bool on);
+private slots:
+    void finishGrabbing();
 private:
     Logger* logger;
+    QGraphicsView* view;
+    imageGrabbingWorkerThread* imageGrabbingThread;
     char *DeviceName[4];
 
     BOOL SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, float Avdd, float Dvdd, float Dovdd, float Afvcc, float vpp);
     void MipiRaw10ToP10(BYTE *pIn, BYTE *pOut, int width, int height);
+    BOOL SaveBmpFile(std::string sfilename, BYTE *pBuffer, UINT width, UINT height);
 
     ULONG       m_GrabSizeA;
     ULONG       m_GrabSizeB;

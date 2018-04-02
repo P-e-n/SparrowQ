@@ -19,7 +19,7 @@ public:
 
 private slots:
     void on_enumerateDeviceButton_clicked();
-
+    void on_openCameraButton_clicked();
     void on_testOpenBMP_clicked();
 
 private:

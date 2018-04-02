@@ -28,13 +28,15 @@ SOURCES += \
         sparrow.cpp \
         dothinkey.cpp \
         iniparser.cpp \
-        logger.cpp
+        logger.cpp \
+        imagegrabbingworkerthread.cpp
 
 HEADERS += \
         sparrow.h \
         dothinkey.h \
         iniparser.h \
-        logger.h
+        logger.h \
+        imagegrabbingworkerthread.h
 
 FORMS += \
         sparrow.ui

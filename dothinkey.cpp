@@ -1,6 +1,6 @@
 #include "dothinkey.h"
 
-Dothinkey::Dothinkey(Logger* logger)
+Dothinkey::Dothinkey(Logger* logger, QGraphicsView* view, QWidget *parent)
     : m_iDevIDA(-1)
     , m_iDevIDB(-1)
     , m_fMclkA(12.0f)
@@ -19,10 +19,22 @@ Dothinkey::Dothinkey(Logger* logger)
     , m_vppB(0.0f)
 {
     this->logger = logger;
+    this->view = view;
+    imageGrabbingThread = new imageGrabbingWorkerThread();
+    connect(imageGrabbingThread,  SIGNAL(done()), this, SLOT(finishGrabbing()));
+}
+
+Dothinkey::~Dothinkey()
+{
+    //Clear things here
+    if (imageGrabbingThread != nullptr) {
+        imageGrabbingThread->quit();
+    }
 }
 
 BOOL Dothinkey::DothinkeyEnum()
 {
+    imageGrabbingThread->start();
     logger->write("[DothinkeyEnum] is called");
     DeviceName[4] = { 0 };
     int DeviceNum;
@@ -50,11 +62,6 @@ BOOL Dothinkey::DothinkeyOpen()
 {
     if (m_iDevIDA >= 0) CloseDevice(m_iDevIDA);
     int iDevIDA = -1;
-    if (DeviceName[0] != nullptr)
-    {
-        logger->write("[DothinkeyOpen] Cannot find any dothinkey device!");
-        return DT_ERROR_FAILED;
-    }
     if (OpenDevice(this->DeviceName[0], &iDevIDA, 0) != DT_ERROR_OK)
     {
         logger->write("[DothinkeyOpen] Open device fail!");
@@ -81,7 +88,8 @@ BOOL Dothinkey::DothinkeyLoadIniFile(int channel) {
     SensorTab *pCurrentSensor;
     channel == 0 ? (pCurrentSensor = &this->current_sensor_a) : (pCurrentSensor = &this->current_sensor_b);
     iniParser *iniParser_ = new iniParser();
-    std::string str_filename = "C:\\Sparrow\\IMX362_4L_3024_063_34.ini";
+    //std::string str_filename = "C:\\Sparrow\\IMX362_4L_3024_063_34.ini";
+    std::string str_filename = "C:\\Sparrow\\IMX214_4L_3120_063_34.ini";
     iniParser_->SetIniFilename(str_filename);
 
     if (channel == 0)
@@ -127,6 +135,11 @@ BOOL Dothinkey::DothinkeyLoadIniFile(int channel) {
     return DT_ERROR_OK;
 }
 
+/*
+ * Dothinkey Start Camera Funcion
+ * params: int channel : Select camera channel
+ * This function is used to power on the camera modules
+ */
 BOOL Dothinkey::DothinkeyStartCamera(int channel)
 {
     SensorTab *pSensor = nullptr;
@@ -200,8 +213,9 @@ BOOL Dothinkey::DothinkeyStartCamera(int channel)
     //open video....
     OpenVideo(*grabSize, iDevID);
     SetMonoMode(true, iDevID);
-    //InitDisplay(wnd->GetSafeHwnd(), pSensor->width, pSensor->height, pSensor->type, CHANNEL_A, NULL, iDevID);
-    //InitIsp(pSensor->width, pSensor->height, pSensor->type, CHANNEL_A, iDevID);
+    //InitDisplay and InitIsp are required to call in order to capture frame
+    InitDisplay(nullptr, pSensor->width, pSensor->height, pSensor->type, CHANNEL_A, NULL, iDevID);
+    InitIsp(pSensor->width, pSensor->height, pSensor->type, CHANNEL_A, iDevID);
     return DT_ERROR_OK;
 }
 
@@ -349,6 +363,7 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
 
 BOOL Dothinkey::DothinkeyGrabImage(int channel)
 {
+    logger->write("[DothinkeyGrabImage] Start");
     LPBYTE bmpBuffer = NULL;
     SensorTab *pSensor = nullptr;
     ULONG retSize = 0;
@@ -386,23 +401,85 @@ BOOL Dothinkey::DothinkeyGrabImage(int channel)
         return DT_ERROR_FAILED;
     }
     memset(CameraBuffer, 0, nSize);
-    for (int i = 0; i < 10; i++)
+    logger->write("[DothinkeyGrabImage] Grabbing image...");
+    int ret = GrabFrame(CameraBuffer, grabSize, &retSize, &frameInfo, iDevID);
+    if (ret == DT_ERROR_OK)
     {
-        logger->write("[DothinkeyGrabImage] Grabbing image...");
-        int ret = GrabFrame(CameraBuffer, grabSize, &retSize, &frameInfo, iDevID);
-        if (ret == DT_ERROR_OK)
-        {
-            GetMipiCrcErrorCount(&crcCount, CHANNEL_A, iDevID);
-        }
-        //BOOL bRaw10 = FALSE;
-        ImageProcess(CameraBuffer, bmpBuffer, width, height, &frameInfo, iDevID);
-        DisplayRGB24(bmpBuffer, &frameInfo, iDevID);
-        //SaveBmpFile(std::to_string(iDevID) + "_" + std::to_string(i) + ".bmp", bmpBuffer, width, height);
-        //Sleep(1000);
+        GetMipiCrcErrorCount(&crcCount, CHANNEL_A, iDevID);
     }
+    logger->write("[DothinkeyGrabImage] Grabbing image finished");
+    //BOOL bRaw10 = FALSE;
+    ImageProcess(CameraBuffer, bmpBuffer, width, height, &frameInfo, iDevID);
+    logger->write("[DothinkeyGrabImage] Display 1");
+    //DisplayRGB24(bmpBuffer, &frameInfo, iDevID);
+    //logger->write("[DothinkeyGrabImage] Display 2");
+    QImage * image = new QImage((const uchar*) bmpBuffer, width, height, QImage::Format_RGB888);
+    QPixmap pixmap = QPixmap::fromImage(*image);
+    QGraphicsScene * scene = new QGraphicsScene();
+    logger->write("[DothinkeyGrabImage] Display");
+    scene->addPixmap(pixmap);
+    view->setScene(scene);
+    view->show();
     delete(bmpBuffer);
     delete(CameraBuffer);
     bmpBuffer = NULL;
     CameraBuffer = NULL;
+    logger->write("[DothinkeyGrabImage] Finish");
     return DT_ERROR_OK;
+}
+
+BOOL Dothinkey::DothinkeyGrabbingThread(bool on)
+{
+    logger->write("Force stop is clicked");
+    imageGrabbingThread->stop();
+    return DT_ERROR_OK;
+}
+
+BOOL Dothinkey::SaveBmpFile(std::string sfilename, BYTE *pBuffer, UINT width, UINT height)
+{
+    int				 OffBits;
+    HFILE			 bmpFile;
+    BITMAPFILEHEADER bmpHeader; // Header for Bitmap file
+    BITMAPINFO		 bmpInfo;
+
+    OffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+    DWORD dwSizeImage = width * height * 3;//IMAGESIZE_X*IMAGESIZE_Y*3;
+
+    bmpHeader.bfType = ((WORD)('M' << 8) | 'B');
+    bmpHeader.bfSize = OffBits + dwSizeImage;
+    bmpHeader.bfReserved1 = 0;
+    bmpHeader.bfReserved2 = 0;
+    bmpHeader.bfOffBits = OffBits;
+
+    bmpInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmpInfo.bmiHeader.biWidth = width;
+    bmpInfo.bmiHeader.biHeight = height;
+    bmpInfo.bmiHeader.biPlanes = 1;
+    bmpInfo.bmiHeader.biBitCount = 24;
+    bmpInfo.bmiHeader.biCompression = BI_RGB;
+    bmpInfo.bmiHeader.biSizeImage = 0;
+    bmpInfo.bmiHeader.biXPelsPerMeter = 0;
+    bmpInfo.bmiHeader.biYPelsPerMeter = 0;
+    bmpInfo.bmiHeader.biClrUsed = 0;
+    bmpInfo.bmiHeader.biClrImportant = 0;
+
+    bmpFile = _lcreat(sfilename.c_str(), FALSE);
+    if (bmpFile < 0)
+    {
+        logger->write("Cannot create the bmp file.\r\n");
+        return FALSE;
+    }
+
+    UINT len;
+    len = _lwrite(bmpFile, (LPSTR)&bmpHeader, sizeof(BITMAPFILEHEADER));
+    len = _lwrite(bmpFile, (LPSTR)&bmpInfo, sizeof(BITMAPINFOHEADER));
+    len = _lwrite(bmpFile, (LPSTR)pBuffer, bmpHeader.bfSize - sizeof(bmpHeader) - sizeof(bmpInfo) + 4);  //+4 is for exact filesize
+    _lclose(bmpFile);
+
+    return TRUE;
+}
+
+void Dothinkey::finishGrabbing()
+{
+    DothinkeyGrabImage(0);
 }
