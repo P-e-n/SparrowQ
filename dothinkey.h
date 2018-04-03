@@ -23,10 +23,10 @@ public:
     ~Dothinkey();
     BOOL DothinkeyEnum();   //Enumerate the dothinkey devices
     BOOL DothinkeyOpen();   //Open Camera Devices
+    BOOL DothinkeyClose();  //Close Camera Devices
     BOOL DothinkeyLoadIniFile(int channel);   // 0 is camera channel 0, 1 is camera channel 1
     BOOL DothinkeyStartCamera(int channel);
     BOOL DothinkeyGrabImage(int channel, QImage& output);
-
 private:
     Logger* logger;
     char *DeviceName[4];

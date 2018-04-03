@@ -77,6 +77,12 @@ BOOL Dothinkey::DothinkeyOpen()
     return DT_ERROR_OK;
 }
 
+BOOL Dothinkey::DothinkeyClose()
+{
+    CloseDevice(0);
+    return DT_ERROR_OK;
+}
+
 BOOL Dothinkey::DothinkeyLoadIniFile(int channel) {
     SensorTab *pCurrentSensor;
     channel == 0 ? (pCurrentSensor = &this->current_sensor_a) : (pCurrentSensor = &this->current_sensor_b);

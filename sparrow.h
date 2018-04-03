@@ -24,9 +24,8 @@ public slots:
     void on_image_changed(QImage image);
 
 private slots:
-    void on_enumerateDeviceButton_clicked();
     void on_openCameraButton_clicked();
-    void on_testOpenBMP_clicked();
+    void on_closeCameraButton_clicked();
 
 private:
     Ui::Sparrow *ui;
