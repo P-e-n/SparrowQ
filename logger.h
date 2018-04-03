@@ -8,6 +8,10 @@
 #include <QDateTime>
 #include <QTime>
 
+extern QPlainTextEdit* log_editor;
+
+void sparrowLogOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg);
+
 class Logger : public QObject
 {
 public:
