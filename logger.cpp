@@ -10,30 +10,6 @@ void sparrowLogOutput(QtMsgType type, const QMessageLogContext &context, const Q
     QString log_msg = qFormatLogMessage(type, context, msg);
     log_file << qPrintable(log_msg) << std::endl;
     log_file.close();
-    /*
-    switch (type) {
-    case QtDebugMsg:
-        log_file << qPrintable(qFormatLogMessage(type, context, msg));
-        fprintf(fp, "Debug: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtInfoMsg:
-        log_file << qPrintable(qFormatLogMessage(type, context, msg));
-        fprintf(fp, "Info: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtWarningMsg:
-        log_file << qPrintable(qFormatLogMessage(type, context, msg));
-        fprintf(fp, "Warning: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtCriticalMsg:
-        log_file << qPrintable(qFormatLogMessage(type, context, msg));
-        fprintf(fp, "Critical: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        break;
-    case QtFatalMsg:
-        log_file << qPrintable(qFormatLogMessage(type, context, msg));
-        fprintf(fp, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), context.file, context.line, context.function);
-        fclose(fp);
-        abort();
-    }*/
     if (log_editor) {
         log_editor->appendPlainText(log_msg);
     }
