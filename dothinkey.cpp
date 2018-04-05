@@ -1,6 +1,6 @@
 #include "dothinkey.h"
 
-Dothinkey::Dothinkey(Logger* logger, QWidget *parent)
+Dothinkey::Dothinkey(QWidget *parent)
     : m_iDevIDA(-1)
     , m_iDevIDB(-1)
     , m_fMclkA(12.0f)
@@ -18,7 +18,6 @@ Dothinkey::Dothinkey(Logger* logger, QWidget *parent)
     , m_vppA(0.0f)
     , m_vppB(0.0f)
 {
-    this->logger = logger;
 }
 
 Dothinkey::~Dothinkey()
@@ -28,14 +27,14 @@ Dothinkey::~Dothinkey()
 
 BOOL Dothinkey::DothinkeyEnum()
 {
-    logger->write("[DothinkeyEnum] is called");
+    qDebug("[DothinkeyEnum] is called");
     DeviceName[4] = { 0 };
     int DeviceNum;
     EnumerateDevice(DeviceName, 4, &DeviceNum);
     if (DeviceNum == 0)
     {
         //Log::GetInstance()->Write("[DothinkeyEnum] Cannot find any device!");
-        logger->write("[DothinkeyEnum] Cannot find any device!");
+        qCritical("[DothinkeyEnum] Cannot find any device!");
         return DT_ERROR_FAILED;
     }
     for (int i = 0; i < DeviceNum; i++)
@@ -44,7 +43,7 @@ BOOL Dothinkey::DothinkeyEnum()
         {
             QString str = "[DothinkeyEnum] Device Found: ";
             str.append(DeviceName[i]);
-            logger->write(str);
+            qInfo(str.toStdString().c_str());
         }
     }
     return DT_ERROR_OK;
@@ -57,7 +56,7 @@ BOOL Dothinkey::DothinkeyOpen()
     int iDevIDA = -1;
     if (OpenDevice(this->DeviceName[0], &iDevIDA, 0) != DT_ERROR_OK)
     {
-        logger->write("[DothinkeyOpen] Open device fail!");
+        qCritical("[DothinkeyOpen] Open device fail!");
         return DT_ERROR_FAILED;
     }
     else
@@ -69,7 +68,7 @@ BOOL Dothinkey::DothinkeyOpen()
         {
             std::string s(reinterpret_cast<const char *>(pSN), 32);
             if (s.length() > 0) {
-                logger->write("[DothinkeyOpen] Open device success!");
+                qInfo("[DothinkeyOpen] Open device success!");
                 m_iDevIDA = iDevIDA;
             }
         }
@@ -163,7 +162,7 @@ BOOL Dothinkey::DothinkeyStartCamera(int channel)
     if (SetSensorClock(false, (USHORT)(0 * 10), iDevID) != DT_ERROR_OK)
     {
         CloseDevice(iDevID);
-        logger->write("[DothinkeyStartCamera] Set Clock Fail!");
+        qCritical("[DothinkeyStartCamera] Set Clock Fail!");
         return false;
     }
     Sleep(1);
@@ -171,10 +170,10 @@ BOOL Dothinkey::DothinkeyStartCamera(int channel)
     if (SetVoltageMclk(*pSensor, iDevID, m_fMclkA, m_fAvddA, m_fDvddA, m_fDovddA, m_fAfvccA, m_vppA) != DT_ERROR_OK)
     {
         CloseDevice(iDevID);
-        logger->write("[DothinkeyStartCamera] Set Voltage and Mclk Failed!");
+        qCritical("[DothinkeyStartCamera] Set Voltage and Mclk Failed!");
         return false;
     }
-    logger->write("[DothinkeyStartCamera] Start Camera Success!");
+    qInfo("[DothinkeyStartCamera] Start Camera Success!");
 
     //I2C init
     SetSensorI2cRate(I2C_400K, iDevID);
@@ -189,7 +188,7 @@ BOOL Dothinkey::DothinkeyStartCamera(int channel)
     //check sensoris on line...
     if (SensorIsMe(pSensor, CHANNEL_A, 0, iDevID) != DT_ERROR_OK)
     {
-        logger->write("[DothinkeyStartCamera] Sensor is not ok!");
+        qCritical("[DothinkeyStartCamera] Sensor is not ok!");
         return DT_ERROR_FAILED;
     }
     //init sensor....
@@ -198,7 +197,7 @@ BOOL Dothinkey::DothinkeyStartCamera(int channel)
         pSensor->ParaListSize,
         pSensor->mode, iDevID) != DT_ERROR_OK)
     {
-        logger->write("[DothinkeyStartCamera] Init Sensor Failed! \r\n");
+        qCritical("[DothinkeyStartCamera] Init Sensor Failed! \r\n");
         return DT_ERROR_FAILED;
     }
 
@@ -229,7 +228,7 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
     {
         CloseDevice(iDevID);
-        logger->write("[SetVoltageMclk] Set Voltage Failed! \r\n");
+        qCritical("[SetVoltageMclk] Set Voltage Failed! \r\n");
         return DT_ERROR_FAILED;
     }
     //wait for the power is all to zero....
@@ -237,7 +236,7 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     if (PmuSetOnOff(Power, OnOff, 5, iDevID) != DT_ERROR_OK)
     {
         CloseDevice(iDevID);
-        logger->write("[SetVoltageMclk] Open PowerOnOff Failed! \r\n");
+        qCritical("[SetVoltageMclk] Open PowerOnOff Failed! \r\n");
         return DT_ERROR_FAILED;
     }
     Sleep(50);
@@ -245,7 +244,7 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     Volt[POWER_DOVDD] = (int)(Dovdd * 1000); // 2.8V
     if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
     {
-        logger->write("[SetVoltageMclk] Open PowerOn Failed!");
+        qCritical("[SetVoltageMclk] Open PowerOn Failed!");
         return DT_ERROR_FAILED;
     }
     Sleep(2);
@@ -254,7 +253,7 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     Volt[POWER_DVDD] = (int)(Dvdd * 1000); // 2.8V
     if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
     {
-        logger->write("[SetVoltageMclk] Open PowerOn Failed!");
+        qCritical("[SetVoltageMclk] Open PowerOn Failed!");
         return DT_ERROR_FAILED;
     }
     Sleep(2);
@@ -263,7 +262,7 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     Volt[POWER_AVDD] = (int)(Avdd * 1000); // 2.8V
     if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
     {
-        logger->write("[SetVoltageMclk] Open PowerOn Failed!");
+        qCritical("[SetVoltageMclk] Open PowerOn Failed!");
         return DT_ERROR_FAILED;
     }
     Sleep(2);
@@ -272,7 +271,7 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     Volt[POWER_VPP] = (int)(vpp * 1000); // 2.8V
     if (PmuSetVoltage(Power, Volt, 5, iDevID) != DT_ERROR_OK)
     {
-        logger->write("[SetVoltageMclk] Open PowerOn Failed!");
+        qCritical("[SetVoltageMclk] Open PowerOn Failed!");
         return DT_ERROR_FAILED;
     }
     //should wait for 50ms to be ready...
@@ -353,7 +352,7 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     }
     if (SetSensorClock(TRUE, (USHORT)(Mclk * 10), iDevID) != DT_ERROR_OK)
     {
-        logger->write("[SetVoltageMclk] Set Mclk Failed!");
+        qCritical("[SetVoltageMclk] Set Mclk Failed!");
         return DT_ERROR_FAILED;
     }
     SetSoftPinPullUp(IO_PULLUP, iDevID);
@@ -466,7 +465,7 @@ BOOL Dothinkey::SaveBmpFile(std::string sfilename, BYTE *pBuffer, UINT width, UI
     bmpFile = _lcreat(sfilename.c_str(), FALSE);
     if (bmpFile < 0)
     {
-        logger->write("Cannot create the bmp file.\r\n");
+        qCritical("Cannot create the bmp file.\r\n");
         return FALSE;
     }
 

@@ -4,7 +4,6 @@
 #include <QMainWindow>
 #include "dothinkey.h"
 #include "imagegrabbingworkerthread.h"
-#include "logger.h"
 #include <QGraphicsScene>
 
 namespace Ui {
@@ -31,7 +30,6 @@ private:
     Ui::Sparrow *ui;
     QGraphicsScene * scene = new QGraphicsScene();
     Dothinkey *imageGrabber;
-    Logger* logger;
 };
 
 #endif // SPARROW_H

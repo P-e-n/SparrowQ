@@ -19,7 +19,7 @@ class Dothinkey : public QObject
 {
     Q_OBJECT
 public:
-    explicit Dothinkey(Logger* logger, QWidget *parent = 0);
+    explicit Dothinkey(QWidget *parent = 0);
     ~Dothinkey();
     BOOL DothinkeyEnum();   //Enumerate the dothinkey devices
     BOOL DothinkeyOpen();   //Open Camera Devices
@@ -28,7 +28,6 @@ public:
     BOOL DothinkeyStartCamera(int channel);
     BOOL DothinkeyGrabImage(int channel, QImage& output);
 private:
-    Logger* logger;
     char *DeviceName[4];
 
     BOOL SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, float Avdd, float Dvdd, float Dovdd, float Afvcc, float vpp);
