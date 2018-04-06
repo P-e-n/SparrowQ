@@ -27,6 +27,36 @@ public:
     BOOL DothinkeyLoadIniFile(int channel);   // 0 is camera channel 0, 1 is camera channel 1
     BOOL DothinkeyStartCamera(int channel);
     BOOL DothinkeyGrabImage(int channel, QImage& output);
+
+    struct CameraChannel
+    {
+        CameraChannel()
+            : m_iDevID(-1)
+            , m_fMclk(12.0f)
+            , m_fAvdd(2.8f)
+            , m_fDovdd(1.8f)
+            , m_fDvdd(1.5f)
+            , m_fAfvcc(2.8f)
+            , m_vpp(0.0f)
+            , m_uFocusPos(0)
+        {}
+
+        bool CloseCameraChannel();
+        SensorTab current_sensor;
+        char* m_charCurrentDevice;
+        int m_iDevID;
+        ULONG m_GrabSize;
+        float m_fMclk;
+        float m_fAvdd;
+        float m_fDovdd;
+        float m_fDvdd;
+        float m_fAfvcc;
+        float m_vpp;
+        UINT m_uFocusPos;
+        float m_fFrameFps;
+        int m_iFrameErr;
+        int m_iFrameCnt;
+    };
 private:
     char *DeviceName[4];
 
@@ -34,35 +64,7 @@ private:
     void MipiRaw10ToP10(BYTE *pIn, BYTE *pOut, int width, int height);
     BOOL SaveBmpFile(std::string sfilename, BYTE *pBuffer, UINT width, UINT height);
 
-    ULONG       m_GrabSizeA;
-    ULONG       m_GrabSizeB;
-    SensorTab   current_sensor_a;
-    SensorTab   current_sensor_b;
-    char*       m_charCurrentDeviceA;
-    char*       m_charCurrentDeviceB;
-    int         m_iDevIDA;
-    int         m_iDevIDB;
-    float       m_fMclkA;
-    float       m_fMclkB;
-    float       m_fAvddA;
-    float       m_fDvddA;
-    float       m_fDovddA;
-    float       m_fAfvccA;
-    float       m_fAvddB;
-    float       m_fDvddB;
-    float       m_fDovddB;
-    float       m_fAfvccB;
-
-    UINT        m_uFocusPosA;
-    UINT        m_uFocusPosB;
-    float       m_fFrameFpsA;
-    int         m_iFrameErrA;
-    int         m_iFrameCntA;
-    float       m_fFrameFpsB;
-    int         m_iFrameErrB;
-    int         m_iFrameCntB;
-    float m_vppA;
-    float m_vppB;
+    CameraChannel m_CameraChannels[2];
 };
 
 #endif // DOTHINKEY_H

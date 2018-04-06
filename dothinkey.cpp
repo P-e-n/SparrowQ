@@ -1,22 +1,15 @@
 #include "dothinkey.h"
 
+bool Dothinkey::CameraChannel::CloseCameraChannel()
+{
+    if (m_iDevID> 0) {
+        CloseDevice(m_iDevID);
+        return true;
+    }
+    return false;
+}
+
 Dothinkey::Dothinkey(QWidget *parent)
-    : m_iDevIDA(-1)
-    , m_iDevIDB(-1)
-    , m_fMclkA(12.0f)
-    , m_fMclkB(12.0f)
-    , m_fAvddA(2.8f)
-    , m_fDvddA(1.5f)
-    , m_fDovddA(1.8f)
-    , m_fAfvccA(2.8f)
-    , m_fAvddB(2.8f)
-    , m_fDvddB(1.5f)
-    , m_fDovddB(1.8f)
-    , m_fAfvccB(2.8f)
-    , m_uFocusPosA(0)
-    , m_uFocusPosB(0)
-    , m_vppA(0.0f)
-    , m_vppB(0.0f)
 {
 }
 
@@ -52,25 +45,23 @@ BOOL Dothinkey::DothinkeyEnum()
 //Only one channel of dothinkey
 BOOL Dothinkey::DothinkeyOpen()
 {
-    if (m_iDevIDA >= 0) CloseDevice(m_iDevIDA);
+    m_CameraChannels[0].CloseCameraChannel();
+
     int iDevIDA = -1;
     if (OpenDevice(this->DeviceName[0], &iDevIDA, 0) != DT_ERROR_OK)
     {
         qCritical("[DothinkeyOpen] Open device fail!");
         return DT_ERROR_FAILED;
     }
-    else
+    BYTE pSN[32];
+    int iBufferSize = 32;
+    int pRetLen = 0;
+    if (GetDeviceSN(pSN, iBufferSize, &pRetLen, iDevIDA) == DT_ERROR_OK)
     {
-        BYTE pSN[32];
-        int iBufferSize = 32;
-        int pRetLen = 0;
-        if (GetDeviceSN(pSN, iBufferSize, &pRetLen, iDevIDA) == DT_ERROR_OK)
-        {
-            std::string s(reinterpret_cast<const char *>(pSN), 32);
-            if (s.length() > 0) {
-                qInfo("[DothinkeyOpen] Open device success!");
-                m_iDevIDA = iDevIDA;
-            }
+        std::string s(reinterpret_cast<const char *>(pSN), 32);
+        if (s.length() > 0) {
+            qInfo("[DothinkeyOpen] Open device success!");
+            m_CameraChannels[0].m_iDevID = iDevIDA;
         }
     }
     return DT_ERROR_OK;
@@ -84,26 +75,19 @@ BOOL Dothinkey::DothinkeyClose()
 
 BOOL Dothinkey::DothinkeyLoadIniFile(int channel) {
     SensorTab *pCurrentSensor;
-    channel == 0 ? (pCurrentSensor = &this->current_sensor_a) : (pCurrentSensor = &this->current_sensor_b);
+    pCurrentSensor = &(this->m_CameraChannels[channel].current_sensor);
     iniParser *iniParser_ = new iniParser();
     //std::string str_filename = "C:\\Sparrow\\IMX362_4L_3024_063_34.ini";
     std::string str_filename = "C:\\Sparrow\\IMX214_4L_3120_063_34.ini";
     iniParser_->SetIniFilename(str_filename);
 
-    if (channel == 0)
-    {
-        m_fMclkA = (float)iniParser_->ReadIniData("Sensor", "mclk", 0x01) / 1000;
-        m_fAvddA = (float)iniParser_->ReadIniData("Sensor", "avdd", 0x00) / 1000;
-        m_fDovddA = (float)iniParser_->ReadIniData("Sensor", "dovdd", 0x00) / 1000;
-        m_fDvddA = (float)iniParser_->ReadIniData("Sensor", "dvdd", 0x00) / 1000;
+    if (channel == 0 || channel == 1) {
+        m_CameraChannels[channel].m_fMclk = (float)iniParser_->ReadIniData("Sensor", "mclk", 0x01) / 1000;
+        m_CameraChannels[channel].m_fAvdd = (float)iniParser_->ReadIniData("Sensor", "avdd", 0x00) / 1000;
+        m_CameraChannels[channel].m_fDovdd = (float)iniParser_->ReadIniData("Sensor", "dovdd", 0x00) / 1000;
+        m_CameraChannels[channel].m_fDvdd = (float)iniParser_->ReadIniData("Sensor", "dvdd", 0x00) / 1000;
     }
-    else if (channel == 1)
-    {
-        m_fMclkB = (float)iniParser_->ReadIniData("Sensor", "mclk", 0x01) / 1000;
-        m_fAvddB = (float)iniParser_->ReadIniData("Sensor", "avdd", 0x00) / 1000;
-        m_fDovddB = (float)iniParser_->ReadIniData("Sensor", "dovdd", 0x00) / 1000;
-        m_fDvddB = (float)iniParser_->ReadIniData("Sensor", "dvdd", 0x00) / 1000;
-    }
+
     pCurrentSensor->width = iniParser_->ReadIniData("Sensor", "width", 0);
     pCurrentSensor->height = iniParser_->ReadIniData("Sensor", "height", 0);
     pCurrentSensor->type = iniParser_->ReadIniData("Sensor", "type", 2);
@@ -143,20 +127,23 @@ BOOL Dothinkey::DothinkeyStartCamera(int channel)
     SensorTab *pSensor = nullptr;
     ULONG *grabSize = nullptr;
     int iDevID = -1;
-    if (channel == 0)
-    {
-        pSensor = &current_sensor_a;
-        iDevID = m_iDevIDA;
-        grabSize = &m_GrabSizeA;
+    float fMclk;
+    float fAvdd;
+    float fDvdd;
+    float fDovdd;
+    float fAfvcc;
+    UINT vpp;
+    if (channel == 0 || channel == 1) {
+        pSensor = &(m_CameraChannels[channel].current_sensor);
+        iDevID = m_CameraChannels[channel].m_iDevID;
+        grabSize = &(m_CameraChannels[channel].m_GrabSize);
+        fMclk = m_CameraChannels[channel].m_fMclk;
+        fAvdd = m_CameraChannels[channel].m_fAvdd;
+        fDvdd = m_CameraChannels[channel].m_fDvdd;
+        fDovdd = m_CameraChannels[channel].m_fDovdd;
+        fAfvcc = m_CameraChannels[channel].m_fAfvcc;
+        vpp = m_CameraChannels[channel].m_vpp;
     }
-    else if (channel == 1)
-    {
-        pSensor = &current_sensor_b;
-        iDevID = m_iDevIDB;
-        grabSize = &m_GrabSizeB;
-    }
-    channel == 0 ? pSensor = &current_sensor_a : &current_sensor_b;
-    channel == 0 ? iDevID = m_iDevIDA : m_iDevIDB;
     //ToDo: KillDataBuffer
     SetSoftPinPullUp(IO_NOPULL, 0);
     if (SetSensorClock(false, (USHORT)(0 * 10), iDevID) != DT_ERROR_OK)
@@ -167,7 +154,7 @@ BOOL Dothinkey::DothinkeyStartCamera(int channel)
     }
     Sleep(1);
 
-    if (SetVoltageMclk(*pSensor, iDevID, m_fMclkA, m_fAvddA, m_fDvddA, m_fDovddA, m_fAfvccA, m_vppA) != DT_ERROR_OK)
+    if (SetVoltageMclk(*pSensor, iDevID, fMclk, fAvdd, fDvdd, fDovdd, fAfvcc, vpp) != DT_ERROR_OK)
     {
         CloseDevice(iDevID);
         qCritical("[DothinkeyStartCamera] Set Voltage and Mclk Failed!");
@@ -368,18 +355,12 @@ BOOL Dothinkey::DothinkeyGrabImage(int channel, QImage& output)
     int iDevID = -1;
     UINT crcCount = 0;
     int grabSize;
-    if (channel == 0)
-    {
-        pSensor = &current_sensor_a;
-        iDevID = this->m_iDevIDA;
-        grabSize = this->m_GrabSizeA;
+    if (channel == 0 || channel == 1) {
+        pSensor = &(m_CameraChannels[channel].current_sensor);
+        iDevID = m_CameraChannels[channel].m_iDevID;
+        grabSize = m_CameraChannels[channel].m_GrabSize;
     }
-    else if (channel == 1)
-    {
-        pSensor = &current_sensor_b;
-        iDevID = this->m_iDevIDB;
-        grabSize = this->m_GrabSizeB;
-    }
+
     USHORT width = pSensor->width;
     USHORT height = pSensor->height;
     //BYTE type = pSensor->type;
