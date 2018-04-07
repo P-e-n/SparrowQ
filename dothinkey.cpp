@@ -2,7 +2,7 @@
 
 bool Dothinkey::CameraChannel::CloseCameraChannel()
 {
-    if (m_iDevID> 0) {
+    if (this->m_iDevID>= 0) {
         CloseDevice(m_iDevID);
         return true;
     }
@@ -69,7 +69,11 @@ BOOL Dothinkey::DothinkeyOpen()
 
 BOOL Dothinkey::DothinkeyClose()
 {
-    CloseDevice(0);
+    qInfo("Close device!");
+    for (CameraChannel cc: m_CameraChannels)
+    {
+        cc.CloseCameraChannel();
+    }
     return DT_ERROR_OK;
 }
 
@@ -346,10 +350,8 @@ BOOL Dothinkey::SetVoltageMclk(SensorTab CurrentSensor, int iDevID, float Mclk, 
     return TRUE;
 }
 
-BOOL Dothinkey::DothinkeyGrabImage(int channel, QImage& output)
+QImage* Dothinkey::DothinkeyGrabImage(int channel)
 {
-    //logger->write("[DothinkeyGrabImage] Start");
-    LPBYTE bmpBuffer = NULL;
     SensorTab *pSensor = nullptr;
     ULONG retSize = 0;
     int iDevID = -1;
@@ -365,11 +367,7 @@ BOOL Dothinkey::DothinkeyGrabImage(int channel, QImage& output)
     USHORT height = pSensor->height;
     //BYTE type = pSensor->type;
     FrameInfo frameInfo;
-    bmpBuffer = (LPBYTE)malloc(width * height * 4);
-    if (bmpBuffer == NULL)
-    {
-      //  logger->write("[DothinkeyGrabImage] Malloc BMP buffer fail.");
-    }
+    static LPBYTE bmpBuffer = (LPBYTE)malloc(width * height * 4);
     //allocate the bmp buffer.
     UINT nSize = width * height * 3 + 1024 * 1024;
     LPBYTE CameraBuffer = NULL;
@@ -379,40 +377,16 @@ BOOL Dothinkey::DothinkeyGrabImage(int channel, QImage& output)
         return false;
     }
     memset(CameraBuffer, 0, nSize);
-  //  logger->write("[DothinkeyGrabImage] Grabbing image...");
     int ret = GrabFrame(CameraBuffer, grabSize, &retSize, &frameInfo, iDevID);
     if (ret == DT_ERROR_OK)
     {
         GetMipiCrcErrorCount(&crcCount, CHANNEL_A, iDevID);
     }
-  //  logger->write("[DothinkeyGrabImage] Grabbing image finished");
-    //BOOL bRaw10 = FALSE;
     ImageProcess(CameraBuffer, bmpBuffer, width, height, &frameInfo, iDevID);
-  //  logger->write("[DothinkeyGrabImage] Display 1");
-    //DisplayRGB24(bmpBuffer, &frameInfo, iDevID);
-    //logger->write("[DothinkeyGrabImage] Display 2");
     QImage * image = new QImage((const uchar*) bmpBuffer, width, height, QImage::Format_RGB888);
-   /* QPixmap pixmap = QPixmap::fromImage(*image);
-    if (scene == nullptr)
-    {
-        scene = new QGraphicsScene();
-    }
-    logger->write("[DothinkeyGrabImage] Display");
-    scene->clear();
-    scene->addPixmap(pixmap);
-    view->setScene(scene);
-    view->fitInView(scene->sceneRect(), Qt::KeepAspectRatio);
-    //view->show();
-    */
-    delete(bmpBuffer);
     delete(CameraBuffer);
-    bmpBuffer = NULL;
     CameraBuffer = NULL;
-    //delete image;
-    //delete scene;
-  //  logger->write("[DothinkeyGrabImage] Finish");
-    output = *image;
-    return true;
+    return image;
 }
 
 BOOL Dothinkey::SaveBmpFile(std::string sfilename, BYTE *pBuffer, UINT width, UINT height)

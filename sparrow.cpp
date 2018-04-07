@@ -41,7 +41,6 @@ Sparrow::~Sparrow()
 
 void Sparrow::on_openCameraButton_clicked()
 {
-    qInfo("OpenDevice clicked");
     const int channel = 0;
     bool res = imageGrabber->DothinkeyEnum();
     if (!res) { qCritical("Cannot find dothinkey"); return; }
@@ -53,14 +52,16 @@ void Sparrow::on_openCameraButton_clicked()
     if (!res) { qCritical("Cannot start camera"); return;}
     ui->openCameraButton->setEnabled(false);
     ui->closeCameraButton->setEnabled(true);
-    //imageGrabber->DothinkeyGrabbingThread(true);
-    //imageThread->start();
+    imageThread->start();
 }
 
 void Sparrow::on_closeCameraButton_clicked()
 {
     ui->openCameraButton->setEnabled(true);
     ui->closeCameraButton->setEnabled(false);
+    imageThread->stop();
+    Sleep(100);
+    imageThread->exit();
     imageGrabber->DothinkeyClose();
 }
 
@@ -69,9 +70,8 @@ void Sparrow::on_closeCameraButton_clicked()
 void Sparrow::on_image_changed(QImage image)
 {
     QPixmap pixmap = QPixmap::fromImage(image);
-    QPixmap qp = QPixmap(":/images/Flamingo.bmp");
     scene->clear();
-    scene->addPixmap(qp);
+    scene->addPixmap(pixmap);
     ui->testBmpView->setScene(scene);
     ui->testBmpView->fitInView(scene->sceneRect(), Qt::KeepAspectRatio);
 }

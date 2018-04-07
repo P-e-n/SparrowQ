@@ -6,7 +6,6 @@
 #include "imagekit.h"
 #include "dtccm2.h"
 #include "iniparser.h"
-#include "logger.h"
 #include <QObject>
 #include <QPixmap>
 
@@ -26,7 +25,7 @@ public:
     BOOL DothinkeyClose();  //Close Camera Devices
     BOOL DothinkeyLoadIniFile(int channel);   // 0 is camera channel 0, 1 is camera channel 1
     BOOL DothinkeyStartCamera(int channel);
-    BOOL DothinkeyGrabImage(int channel, QImage& output);
+    QImage* DothinkeyGrabImage(int channel);
 
     struct CameraChannel
     {
